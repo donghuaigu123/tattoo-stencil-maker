@@ -1,0 +1,29 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.donghuaigu.stencil'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.donghuaigu.stencil"
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName "1.0.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    // 完全使用 Android framework API，无 AndroidX / 无第三方库，
+    // 因此 APK 体积极小、无动态权限弹窗、无网络访问。
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}

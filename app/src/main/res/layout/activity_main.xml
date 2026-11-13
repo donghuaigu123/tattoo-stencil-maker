@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/windowBg"
+    android:fitsSystemWindows="true">
+
+    <!-- 标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingLeft="18dp"
+        android:paddingRight="18dp"
+        android:background="@color/primary">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textColor="#FFFFFFFF"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_subtitle"
+                android:textColor="#FFAEBBD4"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="v1.0"
+            android:textColor="#FF8A97B2"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- 对比画布 -->
+    <com.donghuaigu.stencil.CompareView
+        android:id="@+id/compareView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/tvHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="4dp"
+        android:gravity="center"
+        android:text="拖动中间分割线对比 · 双指放大查看细节"
+        android:textColor="@color/textMuted"
+        android:textSize="11sp" />
+
+    <!-- 状态 / 进度 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingBottom="6dp">
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="12dp"
+            android:layout_weight="1"
+            android:max="100"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="等待导入图片"
+            android:textColor="@color/textMuted"
+            android:textSize="12sp"
+            android:singleLine="true"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <!-- 查看模式 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp">
+
+        <Button android:id="@+id/btnModeOriginal"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="原图" android:textSize="13sp" android:background="#FFE8ECF3"
+            android:textColor="#FF44506A" android:layout_marginRight="4dp" />
+        <Button android:id="@+id/btnModeResult"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="线稿" android:textSize="13sp" android:background="#FFE8ECF3"
+            android:textColor="#FF44506A" android:layout_marginLeft="4dp" android:layout_marginRight="4dp" />
+        <Button android:id="@+id/btnModeCompare"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="对比" android:textSize="13sp" android:background="#FF2C6BED"
+            android:textColor="#FFFFFFFF" android:layout_marginLeft="4dp" />
+    </LinearLayout>
+
+    <!-- 高级设置开关 -->
+    <Button
+        android:id="@+id/btnAdvanced"
+        android:layout_width="match_parent"
+        android:layout_height="34dp"
+        android:text="高级设置 ▾"
+        android:textSize="12sp"
+        android:textColor="@color/textMuted"
+        android:background="#00000000" />
+
+    <!-- 高级设置面板（默认收起，傻瓜式操作） -->
+    <LinearLayout
+        android:id="@+id/panelAdvanced"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="线条预设"
+            android:textColor="@color/textDark"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp">
+            <Button android:id="@+id/btnFine"
+                android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+                android:text="细线" android:textSize="12sp" android:background="#FFE8ECF3" android:textColor="#FF44506A" />
+            <Button android:id="@+id/btnNormal"
+                android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+                android:text="标准" android:textSize="12sp" android:background="#FF2C6BED" android:textColor="#FFFFFFFF"
+                android:layout_marginLeft="6dp" android:layout_marginRight="6dp" />
+            <Button android:id="@+id/btnBold"
+                android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+                android:text="浓线" android:textSize="12sp" android:background="#FFE8ECF3" android:textColor="#FF44506A" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="线条强度"
+            android:textColor="@color/textDark"
+            android:textSize="12sp" />
+
+        <SeekBar android:id="@+id/seekStrength"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:max="100"
+            android:progress="50" />
+
+        <Switch android:id="@+id/switchClean"
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:text="净化深色背景（推荐开启）"
+            android:textSize="12sp"
+            android:textColor="@color/textDark"
+            android:checked="true" />
+    </LinearLayout>
+
+    <!-- 主操作按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="8dp">
+
+        <Button android:id="@+id/btnPick"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.15"
+            android:text="① 选择图片" android:textSize="14sp" android:textStyle="bold"
+            android:background="@color/accent" android:textColor="#FFFFFFFF" />
+
+        <Button android:id="@+id/btnSave"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+            android:text="② 保存 PNG" android:textSize="13sp"
+            android:background="#FF1F2A44" android:textColor="#FFFFFFFF"
+            android:layout_marginLeft="8dp" />
+
+        <Button android:id="@+id/btnShare"
+            android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8"
+            android:text="分享" android:textSize="13sp"
+            android:background="#FF4A5570" android:textColor="#FFFFFFFF"
+            android:layout_marginLeft="8dp" />
+    </LinearLayout>
+
+</LinearLayout>

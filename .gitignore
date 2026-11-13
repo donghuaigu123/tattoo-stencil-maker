@@ -1,0 +1,14 @@
+# 构建产物（APK 作为交付物保留在 apk/ 目录中，不忽略）
+build/
+.gradle/
+local.properties
+.idea/
+*.iml
+*.jks
+*.keystore
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
