@@ -33,7 +33,7 @@
 
 ## 安装使用
 
-1. 下载 [apk/TattooStencil-v1.0.0.apk](apk/TattooStencil-v1.0.0.apk)（约 37 KB），在手机上点击安装。
+1. 下载 [apk/TattooStencil-v1.0.0.apk](apk/TattooStencil-v1.0.0.apk)（约 37 KB），或从 [Releases](https://github.com/donghuaigu123/tattoo-stencil-maker/releases/tag/v1.0.0) 页面下载附件，在手机上点击安装。
    - Android 7.0 及以上；安装时系统可能提示「未知来源」，允许即可。
 2. 打开 App，点 **① 选择图片**，从相册选一张图案照片。
 3. 等待 1～3 秒自动出稿，自动进入对比视图；拖动中间分割线查看效果。
