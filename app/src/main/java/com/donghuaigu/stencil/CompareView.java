@@ -28,8 +28,9 @@ public class CompareView extends View {
     private float splitRatio = 0.5f;
     private float userScale = 1f, panX = 0f, panY = 0f;
 
-    private final Matrix base = new Matrix();
-    private final Matrix draw = new Matrix();
+    // 两张图各自独立适配显示矩形：即使尺寸不同，屏幕上也显示为同样大小、内容对齐
+    private final Matrix drawBefore = new Matrix();
+    private final Matrix drawAfter = new Matrix();
     private final Paint bitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint handlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -37,7 +38,7 @@ public class CompareView extends View {
     private final Paint hintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint chipPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-    private int viewW, viewH, bmW, bmH;
+    private int viewW, viewH;
     private float density;
     private ScaleGestureDetector scaleDetector;
     private int dragMode = 0;      // 0 无 / 1 平移 / 2 拖分割线
@@ -71,8 +72,6 @@ public class CompareView extends View {
     public void setImages(Bitmap before, Bitmap after) {
         original = before;
         result = after;
-        bmW = (before != null) ? before.getWidth() : 0;
-        bmH = (before != null) ? before.getHeight() : 0;
         resetView();
         invalidate();
     }
@@ -97,14 +96,20 @@ public class CompareView extends View {
 
     private float dp(float v) { return v * density; }
 
+    /** 把单张位图等比居中铺进画布，再叠加用户缩放和平移。 */
+    private void fit(Bitmap bm, Matrix m) {
+        if (bm == null || viewW <= 0 || viewH <= 0) return;
+        int bw = bm.getWidth(), bh = bm.getHeight();
+        float s = Math.min((float) viewW / bw, (float) viewH / bh);
+        m.setScale(s, s);
+        m.postTranslate((viewW - bw * s) / 2f, (viewH - bh * s) / 2f);
+        m.postScale(userScale, userScale, viewW / 2f, viewH / 2f);
+        m.postTranslate(panX, panY);
+    }
+
     private void buildMatrix() {
-        if (bmW <= 0 || bmH <= 0 || viewW <= 0 || viewH <= 0) return;
-        float s = Math.min((float) viewW / bmW, (float) viewH / bmH);
-        base.setScale(s, s);
-        base.postTranslate((viewW - bmW * s) / 2f, (viewH - bmH * s) / 2f);
-        draw.set(base);
-        draw.postScale(userScale, userScale, viewW / 2f, viewH / 2f);
-        draw.postTranslate(panX, panY);
+        fit(original, drawBefore);
+        fit((result != null) ? result : original, drawAfter);
     }
 
     @Override protected void onDraw(Canvas canvas) {
@@ -121,19 +126,19 @@ public class CompareView extends View {
         Bitmap right = (result != null) ? result : original;
 
         if (mode == MODE_ORIGINAL) {
-            canvas.drawBitmap(original, draw, bitmapPaint);
+            canvas.drawBitmap(original, drawBefore, bitmapPaint);
         } else if (mode == MODE_RESULT) {
-            canvas.drawBitmap(right, draw, bitmapPaint);
+            canvas.drawBitmap(right, drawAfter, bitmapPaint);
         } else {
             float sx = viewW * splitRatio;
             canvas.save();
             canvas.clipRect(0, 0, sx, viewH);
-            canvas.drawBitmap(original, draw, bitmapPaint);
+            canvas.drawBitmap(original, drawBefore, bitmapPaint);
             canvas.restore();
 
             canvas.save();
             canvas.clipRect(sx, 0, viewW, viewH);
-            canvas.drawBitmap(right, draw, bitmapPaint);
+            canvas.drawBitmap(right, drawAfter, bitmapPaint);
             canvas.restore();
 
             canvas.drawLine(sx, 0, sx, viewH, linePaint);

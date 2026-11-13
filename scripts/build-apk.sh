@@ -11,7 +11,7 @@ SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/opt/android-sdk}}"
 BT="$SDK/build-tools/35.0.0"
 PLATFORM="$SDK/platforms/android-35/android.jar"
 BUILD="$ROOT/build"
-OUT="$ROOT/apk/TattooStencil-v1.0.0.apk"
+OUT="$ROOT/apk/TattooStencil-v1.1.0.apk"
 
 for f in "$BT/aapt2" "$BT/d8" "$BT/zipalign" "$BT/apksigner" "$PLATFORM"; do
   [ -e "$f" ] || { echo "缺少：$f  请先安装 Android SDK 组件"; exit 1; }
@@ -39,7 +39,7 @@ echo "[3/8] 链接资源并生成 R.java"
   --java "$BUILD/gen" \
   --auto-add-overlay \
   --min-sdk-version 24 --target-sdk-version 35 \
-  --version-code 1 --version-name 1.0.0
+  --version-code 2 --version-name 1.1.0
 
 echo "[4/8] 编译 Java 源码"
 find app/src/main/java "$BUILD/gen" -name '*.java' > "$BUILD/sources.txt"

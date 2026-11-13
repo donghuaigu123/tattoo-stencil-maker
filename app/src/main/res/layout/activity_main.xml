@@ -39,7 +39,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="v1.0"
+            android:text="v1.1"
             android:textColor="#FF8A97B2"
             android:textSize="11sp" />
     </LinearLayout>
@@ -175,6 +175,28 @@
             android:layout_height="32dp"
             android:max="100"
             android:progress="50" />
+
+        <TextView android:id="@+id/tvDetailLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="细节保留  50%"
+            android:textColor="@color/textDark"
+            android:textSize="12sp" />
+
+        <SeekBar android:id="@+id/seekDetail"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:max="100"
+            android:progress="50" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="越高保留越多细小笔画（胡须、斑点、毛刺），也可能带入杂点"
+            android:textColor="@color/textMuted"
+            android:textSize="10sp" />
 
         <Switch android:id="@+id/switchClean"
             android:layout_width="match_parent"

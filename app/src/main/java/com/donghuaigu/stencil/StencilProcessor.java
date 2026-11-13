@@ -26,8 +26,12 @@ public final class StencilProcessor {
 
     private StencilProcessor() {}
 
-    /** 处理后的最长边上限；兼顾清晰度、内存与手机端耗时。 */
-    private static final int MAX_SIDE = 1440;
+    /**
+     * 处理后的最长边上限；兼顾清晰度、内存与手机端耗时。
+     * 公开给 MainActivity：导入图片时统一缩放到此尺寸，
+     * 保证「原图」与「线稿」像素尺寸完全一致，对比框内严丝合缝。
+     */
+    public static final int MAX_SIDE = 1440;
     private static final int DOWN_FACTOR = 8;
 
     /** 处理进度回调（在后台线程调用）。 */
@@ -41,29 +45,55 @@ public final class StencilProcessor {
         public int preset = 1;
         /** 0..100，线条敏感度；50 为标准 */
         public int strength = 50;
+        /**
+         * 0..100，细节保留程度；50 为标准。
+         * 与 strength 正交：strength 决定「整体线条显现多少」，
+         * detail 决定「细小 / 孤立笔画（胡须、睫毛、斑点、毛刺）是被清理还是保留」。
+         * 0 = 极简（只留主结构，最干净）；100 = 极精细（细小笔画最多，可能带入杂点）。
+         */
+        public int detail = 50;
         /** 是否漂白深色背景。拍摄白纸线稿时可关闭。 */
         public boolean cleanBackground = true;
     }
 
-    /** 预设对应的内部参数。 */
+    /** 预设 + 滑块计算出的内部参数。 */
     private static final class Tuning {
         float threshold;      // 二值化阈值（归一化到 0..255 后）
         float edgeWeight;     // 边缘融合权重
         int minArea;          // 连通域保留的最小像素数
+        int edgeAreaLimit;    // 边缘杂物清理的面积上限
+        int edgeSpanLimit;    // 边缘杂物清理的尺寸上限
+        int smoothRadius;     // 预处理模糊半径（低细节时多抹掉高频毛刺）
         int dilate;           // 膨胀核边长，1 表示不膨胀
+    }
+
+    /** 分段线性插值：d=0 → v0，d=0.5 → v50，d=1 → v100（保证 50 档与旧默认完全一致）。 */
+    private static float lerp3(float d, float v0, float v50, float v100) {
+        return (d <= 0.5f) ? v0 + (v50 - v0) * (d / 0.5f)
+                           : v50 + (v100 - v50) * ((d - 0.5f) / 0.5f);
     }
 
     private static Tuning tuning(Options o) {
         Tuning t = new Tuning();
+        int baseMinArea;
         switch (o.preset) {
-            case 0:  t.threshold = 70f; t.edgeWeight = 0.26f; t.minArea = 60; t.dilate = 1; break;
-            case 2:  t.threshold = 48f; t.edgeWeight = 0.45f; t.minArea = 90; t.dilate = 3; break;
-            default: t.threshold = 62f; t.edgeWeight = 0.32f; t.minArea = 70; t.dilate = 1; break;
+            case 0:  t.threshold = 70f; t.edgeWeight = 0.26f; baseMinArea = 60; t.dilate = 1; break;
+            case 2:  t.threshold = 48f; t.edgeWeight = 0.45f; baseMinArea = 90; t.dilate = 3; break;
+            default: t.threshold = 62f; t.edgeWeight = 0.32f; baseMinArea = 70; t.dilate = 1; break;
         }
         // 强度滑块：越大 → 阈值越低 → 保留更多线条
         t.threshold -= (o.strength - 50) * 0.28f;
+
+        // 细节保留滑块
+        int detail = Math.max(0, Math.min(100, o.detail));
+        float d = detail / 100f;
+        t.threshold += (0.5f - d) * 16f;                       // 细节越高，越弱的细线也能显现
         if (t.threshold < 12f) t.threshold = 12f;
         if (t.threshold > 105f) t.threshold = 105f;
+        t.minArea = Math.max(1, Math.round(baseMinArea * lerp3(d, 3.0f, 1.0f, 0.12f)));
+        t.edgeAreaLimit = Math.round(1500f * lerp3(d, 2.2f, 1.0f, 0.25f));
+        t.edgeSpanLimit = Math.round(220f * lerp3(d, 1.5f, 1.0f, 0.5f));
+        t.smoothRadius = (detail < 40) ? 2 : 1;                // 低细节额外抹掉高频毛刺
         return t;
     }
 
@@ -97,7 +127,7 @@ public final class StencilProcessor {
                     + 0.587f * ((c >> 8) & 0xFF)
                     + 0.114f * (c & 0xFF);
         }
-        gaussInto(buf1, buf2, buf3, w, h, boxRadius(1.0f), 3);
+        gaussInto(buf1, buf2, buf3, w, h, tun.smoothRadius, 3);
         float[] sm = buf2;
         float[] tmp = buf3;
         report(progress, 18, "抑制材质纹理");
@@ -172,7 +202,7 @@ public final class StencilProcessor {
 
         // ---- 6. 后处理：可选加粗 + 去孤立噪点 ----
         if (tun.dilate > 1) ink = dilate(ink, w, h, tun.dilate);
-        removeSmallComponents(ink, w, h, tun.minArea);
+        removeSmallComponents(ink, w, h, tun.minArea, tun.edgeAreaLimit, tun.edgeSpanLimit);
         report(progress, 94, "清理杂点");
 
         // ---- 7. 输出：纯白底 + 纯黑线，复用像素数组 ----
@@ -358,12 +388,14 @@ public final class StencilProcessor {
 
     /**
      * 8 连通域清理，两步去掉杂点：
-     *  1) 面积小于 minArea 的孤立碎点全删除；
-     *  2) 「贴着画面边缘 + 尺寸较小」的孤立组件判为背景杂物（水印、底座、虚化背景残影）删除。
+     *  1) 面积小于 minArea 的孤立碎点全删除（minArea 由「细节保留」滑块控制）；
+     *  2) 「贴着画面边缘 + 尺寸较小」的孤立组件判为背景杂物（水印、底座、虚化背景残影）删除，
+     *     清理范围同样随「细节保留」滑块放宽或收紧。
      *     中心区域的细节与长线条（外轮廓弧、葫芦柄）一律保留。
      * BFS 队列同时充当组件像素表，避免额外数组。
      */
-    private static void removeSmallComponents(byte[] mask, int w, int h, int minArea) {
+    private static void removeSmallComponents(byte[] mask, int w, int h, int minArea,
+                                              int edgeAreaLimit, int edgeSpanLimit) {
         int n = w * h;
         int[] stack = new int[n];
         int margin = (int) (Math.min(w, h) * 0.055f);
@@ -394,7 +426,8 @@ public final class StencilProcessor {
             int span = Math.max(maxX - minX + 1, maxY - minY + 1);
             boolean nearEdge = minX <= margin || minY <= margin
                     || maxX >= w - margin || maxY >= h - margin;
-            boolean drop = (tail < minArea) || (nearEdge && tail < 1500 && span < 220);
+            boolean drop = (tail < minArea)
+                    || (nearEdge && tail < edgeAreaLimit && span < edgeSpanLimit);
             if (drop) {
                 for (int k = 0; k < tail; k++) mask[stack[k]] = 0;
             }

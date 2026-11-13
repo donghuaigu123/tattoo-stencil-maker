@@ -43,7 +43,8 @@ public class MainActivity extends Activity {
     private Button btnModeOriginal, btnModeResult, btnModeCompare;
     private Button btnFine, btnNormal, btnBold;
     private Button btnPick, btnSave, btnShare, btnAdvanced;
-    private SeekBar seekStrength;
+    private SeekBar seekStrength, seekDetail;
+    private TextView tvDetailLabel;
     private Switch switchClean;
     private View panelAdvanced;
     private TextView tvHint;
@@ -55,6 +56,7 @@ public class MainActivity extends Activity {
     private int jobId = 0;
     private int preset = 1;
     private int strength = 50;
+    private int detail = 50;
     private boolean cleanBackground = true;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +78,8 @@ public class MainActivity extends Activity {
         btnShare = findViewById(R.id.btnShare);
         btnAdvanced = findViewById(R.id.btnAdvanced);
         seekStrength = findViewById(R.id.seekStrength);
+        seekDetail = findViewById(R.id.seekDetail);
+        tvDetailLabel = findViewById(R.id.tvDetailLabel);
         switchClean = findViewById(R.id.switchClean);
         panelAdvanced = findViewById(R.id.panelAdvanced);
 
@@ -105,6 +109,17 @@ public class MainActivity extends Activity {
             @Override public void onStartTrackingTouch(SeekBar s) {}
             @Override public void onStopTrackingTouch(SeekBar s) {
                 strength = s.getProgress();
+                regenerate();
+            }
+        });
+        seekDetail.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar s, int p, boolean fromUser) {
+                tvDetailLabel.setText("细节保留  " + p + "%");
+            }
+            @Override public void onStartTrackingTouch(SeekBar s) {}
+            @Override public void onStopTrackingTouch(SeekBar s) {
+                detail = s.getProgress();
+                tvDetailLabel.setText("细节保留  " + detail + "%");
                 regenerate();
             }
         });
@@ -193,6 +208,7 @@ public class MainActivity extends Activity {
         btnShare.setAlpha(ready ? 1f : 0.45f);
         btnPick.setEnabled(!busy);
         seekStrength.setEnabled(ready);
+        seekDetail.setEnabled(ready);
         switchClean.setEnabled(ready);
         btnFine.setEnabled(ready);
         btnNormal.setEnabled(ready);
@@ -215,6 +231,7 @@ public class MainActivity extends Activity {
         StencilProcessor.Options opt = new StencilProcessor.Options();
         opt.preset = preset;
         opt.strength = strength;
+        opt.detail = detail;
         opt.cleanBackground = cleanBackground;
         final Bitmap input = original;
         setBusy(true, "开始生成线描稿");
@@ -334,7 +351,8 @@ public class MainActivity extends Activity {
 
         int side = Math.max(bounds.outWidth, bounds.outHeight);
         int sample = 1;
-        while (side / sample > 2400) sample *= 2;
+        // 先按 2 的幂粗降采样省内存，解码后再精确缩放到统一工作尺寸
+        while (side / sample > StencilProcessor.MAX_SIDE * 2) sample *= 2;
 
         BitmapFactory.Options opt = new BitmapFactory.Options();
         opt.inSampleSize = sample;
@@ -351,6 +369,18 @@ public class MainActivity extends Activity {
             Bitmap rotated = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(), bmp.getHeight(), m, true);
             if (rotated != bmp) bmp.recycle();
             bmp = rotated;
+        }
+
+        // 关键：把「原图」统一缩放到与线稿算法完全相同的工作尺寸。
+        // 这样 original 与 result 像素尺寸完全一致，对比框内两张图严丝合缝、大小相同。
+        int longSide = Math.max(bmp.getWidth(), bmp.getHeight());
+        if (longSide > StencilProcessor.MAX_SIDE) {
+            float s = StencilProcessor.MAX_SIDE / (float) longSide;
+            int nw = Math.max(1, Math.round(bmp.getWidth() * s));
+            int nh = Math.max(1, Math.round(bmp.getHeight() * s));
+            Bitmap scaled = Bitmap.createScaledBitmap(bmp, nw, nh, true);
+            if (scaled != bmp) bmp.recycle();
+            bmp = scaled;
         }
         return bmp;
     }

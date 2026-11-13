@@ -80,15 +80,29 @@ def percentile(a, q):
     return (b + 0.5) / 2048.0 * mx
 
 
-def process(bgr, preset=1, strength=50, clean_background=True,
+def lerp3(d, v0, v50, v100):
+    """分段线性：d=0→v0，d=0.5→v50，d=1→v100。"""
+    return v0 + (v50 - v0) * (d / .5) if d <= .5 else v50 + (v100 - v50) * ((d - .5) / .5)
+
+
+def process(bgr, preset=1, strength=50, detail=50, clean_background=True,
             threshold=None, edge_weight=None, min_area=None, mask_power=1.0,
-            min_span=0, edge_clean=True):
-    """preset: 0 细线 / 1 标准 / 2 浓线；其余为调参覆盖项。"""
+            min_span=0, edge_clean=True, edge_area=None, edge_span=None,
+            smooth_radius=None):
+    """与 Java 端 StencilProcessor 保持一致。
+    preset 0/1/2 = 细线/标准/浓线；detail 0..100 = 细节保留程度；其余为调参覆盖项。
+    """
     tuning = {0: (70., .26, 60, 1), 1: (62., .32, 70, 1), 2: (48., .45, 90, 3)}[preset]
     t, ew, ma, dilate = tuning
-    threshold = float(np.clip(t - (strength - 50) * 0.28, 12, 105)) if threshold is None else threshold
+    detail = int(np.clip(detail, 0, 100))
+    d = detail / 100.0
+    if threshold is None:
+        threshold = float(np.clip(t - (strength - 50) * 0.28 + (0.5 - d) * 16, 12, 105))
     edge_weight = ew if edge_weight is None else edge_weight
-    min_area = ma if min_area is None else min_area
+    min_area = max(1, round(ma * lerp3(d, 3.0, 1.0, .12))) if min_area is None else min_area
+    edge_area = round(1500 * lerp3(d, 2.2, 1.0, .25)) if edge_area is None else edge_area
+    edge_span = round(220 * lerp3(d, 1.5, 1.0, .5)) if edge_span is None else edge_span
+    smooth_radius = (2 if detail < 40 else 1) if smooth_radius is None else smooth_radius
 
     h0, w0 = bgr.shape[:2]
     ratio = min(1.0, MAX_SIDE / max(w0, h0))
@@ -96,7 +110,7 @@ def process(bgr, preset=1, strength=50, clean_background=True,
     img = cv2.resize(bgr, (w, h), interpolation=cv2.INTER_AREA).astype(np.float32)
 
     gray = .299 * img[:, :, 2] + .587 * img[:, :, 1] + .114 * img[:, :, 0]
-    sm = gauss(gray.astype(np.float32), 1)          # σ≈1
+    sm = gauss(gray.astype(np.float32), smooth_radius)   # 低细节档多抹掉高频毛刺
 
     white = None
     if clean_background:
@@ -145,7 +159,7 @@ def process(bgr, preset=1, strength=50, clean_background=True,
                            stats[i, cv2.CC_STAT_WIDTH], stats[i, cv2.CC_STAT_HEIGHT]
             near_edge = (x <= margin or y <= margin or
                          x + bw >= w - margin or y + bh >= h - margin)
-            if near_edge and area < 1500 and span < 220:
+            if near_edge and area < edge_area and span < edge_span:
                 continue
         keep[lab == i] = 1
     out = np.where(keep != 0, 0, 255).astype(np.uint8)
@@ -158,6 +172,8 @@ if __name__ == '__main__':
     bgr = cv2.imread(src)
     if bgr is None:
         raise SystemExit('cannot read ' + src)
-    res = process(bgr)
+    detail = int(sys.argv[3]) if len(sys.argv) > 3 else 50
+    res = process(bgr, detail=detail)
     cv2.imwrite(dst, res)
-    print('saved', dst, res.shape, 'ink ratio', round(float((res[:, :, 0] == 0).mean()), 4))
+    print('saved', dst, res.shape, 'detail', detail,
+          'ink ratio', round(float((res[:, :, 0] == 0).mean()), 4))
